@@ -1,0 +1,739 @@
+/*
+Copyright © 2025 mochajutsu <https://github.com/mochajutsu>
+
+Licensed under the MIT License. See LICENSE file for details.
+*/
+
+// Package files provides file generation functionality for mkcd.
+// It handles creation of common project files like README, .gitignore, LICENSE, etc.
+package files
+
+import (
+	"fmt"
+	"path/filepath"
+	"strings"
+	"time"
+
+	"github.com/mochajutsu/mkcd/internal/utils"
+	"github.com/pterm/pterm"
+)
+
+// FileGenerator handles generation of common project files
+type FileGenerator struct {
+	fsOps   *utils.FileSystemOperations
+	DryRun  bool
+	Verbose bool
+}
+
+// NewFileGenerator creates a new FileGenerator instance
+func NewFileGenerator(fsOps *utils.FileSystemOperations, dryRun, verbose bool) *FileGenerator {
+	return &FileGenerator{
+		fsOps:   fsOps,
+		DryRun:  dryRun,
+		Verbose: verbose,
+	}
+}
+
+// GenerationContext contains context information for file generation
+type GenerationContext struct {
+	ProjectName   string
+	ProjectPath   string
+	Author        string
+	Email         string
+	Description   string
+	Language      string
+	Framework     string
+	License       string
+	GitRemote     string
+	CurrentYear   int
+}
+
+// NewGenerationContext creates a new GenerationContext with defaults
+func NewGenerationContext(projectPath string) *GenerationContext {
+	projectName := filepath.Base(projectPath)
+	return &GenerationContext{
+		ProjectName: projectName,
+		ProjectPath: projectPath,
+		CurrentYear: time.Now().Year(),
+	}
+}
+
+// GenerateReadme generates a README.md file
+func (fg *FileGenerator) GenerateReadme(ctx *GenerationContext) error {
+	content := fg.generateReadmeContent(ctx)
+	filePath := filepath.Join(ctx.ProjectPath, "README.md")
+	
+	if fg.Verbose {
+		pterm.Debug.Printf("Generating README.md for project: %s", ctx.ProjectName)
+	}
+	
+	return fg.fsOps.CreateFile(filePath, content, 0644)
+}
+
+// generateReadmeContent generates the content for README.md
+func (fg *FileGenerator) generateReadmeContent(ctx *GenerationContext) string {
+	var content strings.Builder
+	
+	// Title
+	content.WriteString(fmt.Sprintf("# %s\n\n", ctx.ProjectName))
+	
+	// Description
+	if ctx.Description != "" {
+		content.WriteString(fmt.Sprintf("%s\n\n", ctx.Description))
+	} else {
+		content.WriteString("A brief description of your project.\n\n")
+	}
+	
+	// Installation section
+	content.WriteString("## Installation\n\n")
+	content.WriteString("```bash\n")
+	content.WriteString("# Add installation instructions here\n")
+	content.WriteString("```\n\n")
+	
+	// Usage section
+	content.WriteString("## Usage\n\n")
+	content.WriteString("```bash\n")
+	content.WriteString("# Add usage examples here\n")
+	content.WriteString("```\n\n")
+	
+	// Features section
+	content.WriteString("## Features\n\n")
+	content.WriteString("- Feature 1\n")
+	content.WriteString("- Feature 2\n")
+	content.WriteString("- Feature 3\n\n")
+	
+	// Contributing section
+	content.WriteString("## Contributing\n\n")
+	content.WriteString("Contributions are welcome! Please feel free to submit a Pull Request.\n\n")
+	
+	// License section
+	if ctx.License != "" {
+		content.WriteString("## License\n\n")
+		content.WriteString(fmt.Sprintf("This project is licensed under the %s License - see the [LICENSE](LICENSE) file for details.\n\n", ctx.License))
+	}
+	
+	// Author section
+	if ctx.Author != "" {
+		content.WriteString("## Author\n\n")
+		if ctx.Email != "" {
+			content.WriteString(fmt.Sprintf("**%s** - [%s](mailto:%s)\n", ctx.Author, ctx.Email, ctx.Email))
+		} else {
+			content.WriteString(fmt.Sprintf("**%s**\n", ctx.Author))
+		}
+	}
+	
+	return content.String()
+}
+
+// GenerateGitignore generates a .gitignore file for the specified language/framework
+func (fg *FileGenerator) GenerateGitignore(ctx *GenerationContext, gitignoreType string) error {
+	content := fg.getGitignoreContent(gitignoreType)
+	if content == "" {
+		return fmt.Errorf("unknown gitignore type: %s", gitignoreType)
+	}
+	
+	filePath := filepath.Join(ctx.ProjectPath, ".gitignore")
+	
+	if fg.Verbose {
+		pterm.Debug.Printf("Generating .gitignore for type: %s", gitignoreType)
+	}
+	
+	return fg.fsOps.CreateFile(filePath, content, 0644)
+}
+
+// getGitignoreContent returns gitignore content for different languages/frameworks
+func (fg *FileGenerator) getGitignoreContent(gitignoreType string) string {
+	templates := map[string]string{
+		"go": `# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with 'go test -c'
+*.test
+
+# Output of the go coverage tool, specifically when used with LiteIDE
+*.out
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+`,
+		"node": `# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# TypeScript v1 declaration files
+typings/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file
+.env
+.env.test
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+
+# Temporary folders
+tmp/
+temp/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+`,
+		"python": `# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
+#   However, in case of collaboration, if having platform-specific dependencies or dependencies
+#   having no cross-platform support, pipenv may install dependencies that don't work, or not
+#   install all needed dependencies.
+#Pipfile.lock
+
+# PEP 582; used by e.g. github.com/David-OConnor/pyflow
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyproject
+
+# Rope project settings
+.ropeproject
+
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+`,
+		"general": `# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Build artifacts
+build/
+dist/
+target/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Dependencies
+node_modules/
+vendor/
+`,
+	}
+	
+	return templates[strings.ToLower(gitignoreType)]
+}
+
+// GenerateLicense generates a LICENSE file
+func (fg *FileGenerator) GenerateLicense(ctx *GenerationContext, licenseType string) error {
+	content := fg.getLicenseContent(licenseType, ctx)
+	if content == "" {
+		return fmt.Errorf("unknown license type: %s", licenseType)
+	}
+	
+	filePath := filepath.Join(ctx.ProjectPath, "LICENSE")
+	
+	if fg.Verbose {
+		pterm.Debug.Printf("Generating LICENSE for type: %s", licenseType)
+	}
+	
+	return fg.fsOps.CreateFile(filePath, content, 0644)
+}
+
+// getLicenseContent returns license content for different license types
+func (fg *FileGenerator) getLicenseContent(licenseType string, ctx *GenerationContext) string {
+	author := ctx.Author
+	if author == "" {
+		author = "[Your Name]"
+	}
+	
+	year := fmt.Sprintf("%d", ctx.CurrentYear)
+	
+	templates := map[string]string{
+		"mit": fmt.Sprintf(`MIT License
+
+Copyright (c) %s %s
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+`, year, author),
+		"apache-2.0": fmt.Sprintf(`Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+"License" shall mean the terms and conditions for use, reproduction,
+and distribution as defined by Sections 1 through 9 of this document.
+
+"Licensor" shall mean the copyright owner or entity granting the License.
+
+"Legal Entity" shall mean the union of the acting entity and all
+other entities that control, are controlled by, or are under common
+control with that entity. For the purposes of this definition,
+"control" means (i) the power, direct or indirect, to cause the
+direction or management of such entity, whether by contract or
+otherwise, or (ii) ownership of fifty percent (50%%) or more of the
+outstanding shares, or (iii) beneficial ownership of such entity.
+
+"You" (or "Your") shall mean an individual or Legal Entity
+exercising permissions granted by this License.
+
+"Source" form shall mean the preferred form for making modifications,
+including but not limited to software source code, documentation
+source, and configuration files.
+
+"Object" form shall mean any form resulting from mechanical
+transformation or translation of a Source form, including but
+not limited to compiled object code, generated documentation,
+and conversions to other media types.
+
+"Work" shall mean the work of authorship, whether in Source or
+Object form, made available under the License, as indicated by a
+copyright notice that is included in or attached to the work
+(which shall not include communications that are clearly marked or
+otherwise designated in writing by the copyright owner as "Not a Work").
+
+"Derivative Works" shall mean any work, whether in Source or Object
+form, that is based upon (or derived from) the Work and for which the
+editorial revisions, annotations, elaborations, or other modifications
+represent, as a whole, an original work of authorship. For the purposes
+of this License, Derivative Works shall not include works that remain
+separable from, or merely link (or bind by name) to the interfaces of,
+the Work and derivative works thereof.
+
+"Contribution" shall mean any work of authorship, including
+the original version of the Work and any modifications or additions
+to that Work or Derivative Works thereof, that is intentionally
+submitted to Licensor for inclusion in the Work by the copyright owner
+or by an individual or Legal Entity authorized to submit on behalf of
+the copyright owner. For the purposes of this definition, "submitted"
+means any form of electronic, verbal, or written communication sent
+to the Licensor or its representatives, including but not limited to
+communication on electronic mailing lists, source code control
+systems, and issue tracking systems that are managed by, or on behalf
+of, the Licensor for the purpose of discussing and improving the Work,
+but excluding communication that is conspicuously marked or otherwise
+designated in writing by the copyright owner as "Not a Contribution."
+
+2. Grant of Copyright License. Subject to the terms and conditions of
+this License, each Contributor hereby grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+copyright license to use, reproduce, modify, display, perform,
+sublicense, and distribute the Work and such Derivative Works in
+Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of
+this License, each Contributor hereby grants to You a perpetual,
+worldwide, non-exclusive, no-charge, royalty-free, irrevocable
+(except as stated in this section) patent license to make, have made,
+use, offer to sell, sell, import, and otherwise transfer the Work,
+where such license applies only to those patent claims licensable
+by such Contributor that are necessarily infringed by their
+Contribution(s) alone or by combination of their Contribution(s)
+with the Work to which such Contribution(s) was submitted. If You
+institute patent litigation against any entity (including a
+cross-claim or counterclaim in a lawsuit) alleging that the Work
+or a Contribution incorporated within the Work constitutes direct
+or contributory patent infringement, then any patent licenses
+granted to You under this License for that Work shall terminate
+as of the date such litigation is filed.
+
+4. Redistribution. You may reproduce and distribute copies of the
+Work or Derivative Works thereof in any medium, with or without
+modifications, and in Source or Object form, provided that You
+meet the following conditions:
+
+(a) You must give any other recipients of the Work or
+    Derivative Works a copy of this License; and
+
+(b) You must cause any modified files to carry prominent notices
+    stating that You changed the files; and
+
+(c) You must retain, in the Source form of any Derivative Works
+    that You distribute, all copyright, trademark, patent,
+    attribution and other notices from the Source form of the Work,
+    excluding those notices that do not pertain to any part of
+    the Derivative Works; and
+
+(d) If the Work includes a "NOTICE" text file as part of its
+    distribution, then any Derivative Works that You distribute must
+    include a readable copy of the attribution notices contained
+    within such NOTICE file, excluding those notices that do not
+    pertain to any part of the Derivative Works, in at least one
+    of the following places: within a NOTICE text file distributed
+    as part of the Derivative Works; within the Source form or
+    documentation, if provided along with the Derivative Works; or,
+    within a display generated by the Derivative Works, if and
+    wherever such third-party notices normally appear. The contents
+    of the NOTICE file are for informational purposes only and
+    do not modify the License. You may add Your own attribution
+    notices within Derivative Works that You distribute, alongside
+    or as an addendum to the NOTICE text from the Work, provided
+    that such additional attribution notices cannot be construed
+    as modifying the License.
+
+You may add Your own copyright notice to Your modifications and
+may provide additional or different license terms and conditions
+for use, reproduction, or distribution of Your modifications, or
+for any such Derivative Works as a whole, provided Your use,
+reproduction, and distribution of the Work otherwise complies with
+the conditions stated in this License.
+
+5. Submission of Contributions. Unless You explicitly state otherwise,
+any Contribution intentionally submitted for inclusion in the Work
+by You to the Licensor shall be under the terms and conditions of
+this License, without any additional terms or conditions.
+Notwithstanding the above, nothing herein shall supersede or modify
+the terms of any separate license agreement you may have executed
+with Licensor regarding such Contributions.
+
+6. Trademarks. This License does not grant permission to use the trade
+names, trademarks, service marks, or product names of the Licensor,
+except as required for reasonable and customary use in describing the
+origin of the Work and reproducing the content of the NOTICE file.
+
+7. Disclaimer of Warranty. Unless required by applicable law or
+agreed to in writing, Licensor provides the Work (and each
+Contributor provides its Contributions) on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+implied, including, without limitation, any warranties or conditions
+of TITLE, NON-INFRINGEMENT, MERCHANTABILITY, or FITNESS FOR A
+PARTICULAR PURPOSE. You are solely responsible for determining the
+appropriateness of using or redistributing the Work and assume any
+risks associated with Your exercise of permissions under this License.
+
+8. Limitation of Liability. In no event and under no legal theory,
+whether in tort (including negligence), contract, or otherwise,
+unless required by applicable law (such as deliberate and grossly
+negligent acts) or agreed to in writing, shall any Contributor be
+liable to You for damages, including any direct, indirect, special,
+incidental, or consequential damages of any character arising as a
+result of this License or out of the use or inability to use the
+Work (including but not limited to damages for loss of goodwill,
+work stoppage, computer failure or malfunction, or any and all
+other commercial damages or losses), even if such Contributor
+has been advised of the possibility of such damages.
+
+9. Accepting Warranty or Support. You may choose to offer, and to
+charge a fee for, warranty, support, indemnity or other liability
+obligations and/or rights consistent with this License. However, in
+accepting such obligations, You may act only on Your own behalf and on
+Your sole responsibility, not on behalf of any other Contributor, and
+only if You agree to indemnify, defend, and hold each Contributor
+harmless for any liability incurred by, or claims asserted against,
+such Contributor by reason of your accepting any such warranty or support.
+
+END OF TERMS AND CONDITIONS
+
+Copyright %s %s
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+`, year, author),
+	}
+	
+	return templates[strings.ToLower(licenseType)]
+}
+
+// CreateCustomFile creates a custom file with specified content
+func (fg *FileGenerator) CreateCustomFile(projectPath, fileName, content string) error {
+	filePath := filepath.Join(projectPath, fileName)
+	
+	if fg.Verbose {
+		pterm.Debug.Printf("Creating custom file: %s", fileName)
+	}
+	
+	return fg.fsOps.CreateFile(filePath, content, 0644)
+}
+
+// GetAvailableGitignoreTypes returns a list of available gitignore types
+func (fg *FileGenerator) GetAvailableGitignoreTypes() []string {
+	return []string{"go", "node", "python", "general"}
+}
+
+// GetAvailableLicenseTypes returns a list of available license types
+func (fg *FileGenerator) GetAvailableLicenseTypes() []string {
+	return []string{"mit", "apache-2.0"}
+}
