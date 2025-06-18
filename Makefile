@@ -158,18 +158,47 @@ package: build-all ## Create distribution packages
 		package_name=$(BINARY_NAME)-$(VERSION)-$$os-$$arch; \
 		echo "$(YELLOW)Packaging $$package_name...$(NC)"; \
 		cd $(DIST_DIR) && \
-		if [ $$os = "windows" ]; then \
-			zip -r $$package_name.zip $(BINARY_NAME)-$$os-$$arch/; \
-		else \
-			tar -czf $$package_name.tar.gz $(BINARY_NAME)-$$os-$$arch/; \
-		fi && \
+		cp ../README.md ../LICENSE ../CHANGELOG.md $(BINARY_NAME)-$$os-$$arch/ 2>/dev/null || true; \
+		tar -czf $$package_name.tar.gz $(BINARY_NAME)-$$os-$$arch/; \
 		cd ..; \
 	done
 	@echo "$(GREEN)Packages created in $(DIST_DIR)/$(NC)"
 
-release: clean test lint package ## Create a release
+checksums: package ## Generate checksums for release packages
+	@echo "$(BLUE)Generating checksums...$(NC)"
+	@cd $(DIST_DIR) && \
+	for file in *.tar.gz *.zip; do \
+		if [ -f "$$file" ]; then \
+			sha256sum "$$file" >> checksums.txt; \
+		fi; \
+	done
+	@echo "$(GREEN)Checksums generated in $(DIST_DIR)/checksums.txt$(NC)"
+
+release: clean test lint package checksums ## Create a release
 	@echo "$(BLUE)Creating release $(VERSION)...$(NC)"
 	@echo "$(GREEN)Release $(VERSION) ready in $(DIST_DIR)/$(NC)"
+	@echo "$(CYAN)Release artifacts:$(NC)"
+	@ls -la $(DIST_DIR)/
+	@echo ""
+	@echo "$(YELLOW)Next steps:$(NC)"
+	@echo "1. Create a GitHub release at: https://github.com/mochajutsu/mkcd/releases/new"
+	@echo "2. Tag: v$(VERSION)"
+	@echo "3. Upload files from $(DIST_DIR)/"
+	@echo "4. Use CHANGELOG.md content for release notes"
+
+# Homebrew formula generation
+homebrew: package ## Generate Homebrew formula
+	@echo "$(BLUE)Generating Homebrew formula...$(NC)"
+	@mkdir -p packaging/homebrew
+	@./scripts/generate-homebrew-formula.sh $(VERSION) > packaging/homebrew/mkcd.rb
+	@echo "$(GREEN)Homebrew formula generated at packaging/homebrew/mkcd.rb$(NC)"
+
+# Arch Linux PKGBUILD generation
+arch: package ## Generate Arch Linux PKGBUILD
+	@echo "$(BLUE)Generating Arch Linux PKGBUILD...$(NC)"
+	@mkdir -p packaging/arch
+	@./scripts/generate-pkgbuild.sh $(VERSION) > packaging/arch/PKGBUILD
+	@echo "$(GREEN)PKGBUILD generated at packaging/arch/PKGBUILD$(NC)"
 
 # Docker targets
 docker: ## Build Docker image

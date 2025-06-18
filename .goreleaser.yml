@@ -1,0 +1,222 @@
+# GoReleaser configuration for mkcd
+# See: https://goreleaser.com
+
+version: 2
+
+project_name: mkcd
+
+before:
+  hooks:
+    - go mod tidy
+    - go generate ./...
+
+builds:
+  - id: mkcd
+    binary: mkcd
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.Version={{.Version}}
+      - -X main.Commit={{.Commit}}
+      - -X main.BuildTime={{.Date}}
+    flags:
+      - -trimpath
+
+archives:
+  - id: mkcd
+    builds:
+      - mkcd
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
+      - '^style:'
+      - '^refactor:'
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: 'Bug fixes'
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: 'Performance improvements'
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: Others
+      order: 999
+
+release:
+  github:
+    owner: mochajutsu
+    name: mkcd
+  draft: false
+  prerelease: auto
+  mode: replace
+  header: |
+    ## Release {{ .Tag }} ({{ .Date }})
+    
+    Welcome to this new release of mkcd!
+  footer: |
+    ## Installation
+    
+    ### Binary Download
+    Download the appropriate binary for your platform from the assets below.
+    
+    ### Package Managers
+    ```bash
+    # Homebrew (macOS/Linux)
+    brew install mochajutsu/tap/mkcd
+    
+    # Go install
+    go install github.com/mochajutsu/mkcd@{{ .Tag }}
+    ```
+    
+    ### Docker
+    ```bash
+    docker run --rm -v $(pwd):/workspace ghcr.io/mochajutsu/mkcd:{{ .Tag }}
+    ```
+    
+    **Full Changelog**: https://github.com/mochajutsu/mkcd/compare/{{ .PreviousTag }}...{{ .Tag }}
+
+# Homebrew tap
+brews:
+  - name: mkcd
+    repository:
+      owner: mochajutsu
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    folder: Formula
+    homepage: https://github.com/mochajutsu/mkcd
+    description: "Enterprise directory creation and workspace initialization tool"
+    license: MIT
+    test: |
+      system "#{bin}/mkcd --version"
+      system "#{bin}/mkcd --help"
+    install: |
+      bin.install "mkcd"
+      generate_completions_from_executable(bin/"mkcd", "completion")
+
+# Docker images
+dockers:
+  - image_templates:
+      - "ghcr.io/mochajutsu/mkcd:{{ .Version }}-amd64"
+      - "ghcr.io/mochajutsu/mkcd:latest-amd64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/mochajutsu/mkcd"
+  - image_templates:
+      - "ghcr.io/mochajutsu/mkcd:{{ .Version }}-arm64"
+      - "ghcr.io/mochajutsu/mkcd:latest-arm64"
+    dockerfile: Dockerfile
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--label=org.opencontainers.image.created={{.Date}}"
+      - "--label=org.opencontainers.image.title={{.ProjectName}}"
+      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+      - "--label=org.opencontainers.image.version={{.Version}}"
+      - "--label=org.opencontainers.image.source=https://github.com/mochajutsu/mkcd"
+    goarch: arm64
+
+docker_manifests:
+  - name_template: "ghcr.io/mochajutsu/mkcd:{{ .Version }}"
+    image_templates:
+      - "ghcr.io/mochajutsu/mkcd:{{ .Version }}-amd64"
+      - "ghcr.io/mochajutsu/mkcd:{{ .Version }}-arm64"
+  - name_template: "ghcr.io/mochajutsu/mkcd:latest"
+    image_templates:
+      - "ghcr.io/mochajutsu/mkcd:latest-amd64"
+      - "ghcr.io/mochajutsu/mkcd:latest-arm64"
+
+# AUR packages
+aurs:
+  - name: mkcd-bin
+    homepage: https://github.com/mochajutsu/mkcd
+    description: "Enterprise directory creation and workspace initialization tool"
+    maintainers:
+      - 'mochajutsu <https://github.com/mochajutsu>'
+    license: MIT
+    private_key: '{{ .Env.AUR_KEY }}'
+    git_url: 'ssh://aur@aur.archlinux.org/mkcd-bin.git'
+    package: |-
+      # bin
+      install -Dm755 "./mkcd" "${pkgdir}/usr/bin/mkcd"
+      
+      # license
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/mkcd/LICENSE"
+      
+      # completions
+      mkdir -p "${pkgdir}/usr/share/bash-completion/completions"
+      mkdir -p "${pkgdir}/usr/share/zsh/site-functions"
+      mkdir -p "${pkgdir}/usr/share/fish/vendor_completions.d"
+      
+      "${pkgdir}/usr/bin/mkcd" completion bash > "${pkgdir}/usr/share/bash-completion/completions/mkcd"
+      "${pkgdir}/usr/bin/mkcd" completion zsh > "${pkgdir}/usr/share/zsh/site-functions/_mkcd"
+      "${pkgdir}/usr/bin/mkcd" completion fish > "${pkgdir}/usr/share/fish/vendor_completions.d/mkcd.fish"
+
+# Snapcraft
+snapcrafts:
+  - name: mkcd
+    summary: Enterprise directory creation and workspace initialization tool
+    description: |
+      mkcd is a powerful, extensible command-line utility that revolutionizes 
+      directory creation and navigation for developers. Built with Go and Cobra, 
+      it transforms the simple concept of "make directory and change into it" 
+      into a comprehensive workspace initialization tool.
+    grade: stable
+    confinement: strict
+    publish: true
+    license: MIT
+    base: core22
+    apps:
+      mkcd:
+        command: mkcd
+        plugs: ["home", "removable-media"]
+
+# Nix packages
+nix:
+  - name: mkcd
+    repository:
+      owner: mochajutsu
+      name: nur-packages
+    homepage: https://github.com/mochajutsu/mkcd
+    description: "Enterprise directory creation and workspace initialization tool"
+    license: mit
+    path: pkgs/mkcd/default.nix
