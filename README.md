@@ -2,7 +2,8 @@
 
 [![Go Version](https://img.shields.io/badge/Go-1.24.4+-blue.svg)](https://golang.org)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](#)
+[![Release](https://img.shields.io/github/v/release/mochajutsu/mkcd)](https://github.com/mochajutsu/mkcd/releases)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/mochajutsu/mkcd/ci.yml?branch=main)](https://github.com/mochajutsu/mkcd/actions)
 
 A powerful, extensible command-line utility that revolutionizes directory creation and navigation for developers. Built with Go and Cobra, it transforms the simple concept of "make directory and change into it" into a comprehensive workspace initialization tool.
 
@@ -33,9 +34,75 @@ A powerful, extensible command-line utility that revolutionizes directory creati
 
 ## 📦 Installation
 
+### Binary Downloads (Recommended)
+Download the latest release for your platform:
+
+**Linux (x86_64)**
+```bash
+curl -L https://github.com/mochajutsu/mkcd/releases/latest/download/mkcd-v1.0.0-linux-amd64.tar.gz | tar xz
+sudo mv mkcd-v1.0.0-linux-amd64/mkcd /usr/local/bin/
+```
+
+**Linux (ARM64)**
+```bash
+curl -L https://github.com/mochajutsu/mkcd/releases/latest/download/mkcd-v1.0.0-linux-arm64.tar.gz | tar xz
+sudo mv mkcd-v1.0.0-linux-arm64/mkcd /usr/local/bin/
+```
+
+**macOS (Intel)**
+```bash
+curl -L https://github.com/mochajutsu/mkcd/releases/latest/download/mkcd-v1.0.0-darwin-amd64.tar.gz | tar xz
+sudo mv mkcd-v1.0.0-darwin-amd64/mkcd /usr/local/bin/
+```
+
+**macOS (Apple Silicon)**
+```bash
+curl -L https://github.com/mochajutsu/mkcd/releases/latest/download/mkcd-v1.0.0-darwin-arm64.tar.gz | tar xz
+sudo mv mkcd-v1.0.0-darwin-arm64/mkcd /usr/local/bin/
+```
+
+**Windows**
+1. Download `mkcd-v1.0.0-windows-amd64.tar.gz` from [releases](https://github.com/mochajutsu/mkcd/releases)
+2. Extract and add `mkcd.exe` to your PATH
+
+### Verify Installation
+
+After installation, verify mkcd is working:
+
+```bash
+# Check version
+mkcd --version
+
+# View help
+mkcd --help
+
+# Test with dry-run
+mkcd test-project --dry-run --verbose
+```
+
 ### Using Go Install
 ```bash
 go install github.com/mochajutsu/mkcd@latest
+```
+
+### Package Managers
+
+**Homebrew (macOS/Linux)**
+```bash
+brew tap mochajutsu/tap
+brew install mkcd
+```
+
+**Arch Linux (AUR)**
+```bash
+yay -S mkcd-bin
+# or
+paru -S mkcd-bin
+```
+
+**Docker**
+```bash
+docker run --rm -v $(pwd):/workspace ghcr.io/mochajutsu/mkcd:latest --help
 ```
 
 ### Manual Installation
@@ -50,18 +117,6 @@ make install
 # Or build manually
 go build -o mkcd .
 sudo mv mkcd /usr/local/bin/
-```
-
-### Package Managers (Coming Soon)
-```bash
-# Homebrew (macOS/Linux)
-brew install mkcd
-
-# Arch Linux
-pacman -S mkcd
-
-# Ubuntu/Debian
-apt install mkcd
 ```
 
 ## 🎯 Quick Start
@@ -221,14 +276,34 @@ mkcd config reset                    # Reset to defaults
 
 ## 🎨 Examples
 
-### Web Development Project
+### Quick Start Examples
 
 ```bash
-mkcd my-website --profile nodejs --git-remote https://github.com/user/my-website.git
+# Create a simple directory
+mkcd my-project
+
+# Create with Git repository
+mkcd my-project --git
+
+# Create with Git and open in editor
+mkcd my-project --git --open-editor
+
+# Use a profile for instant setup
+mkcd my-app --profile nodejs
 ```
 
-### Go Project
+### Real-World Scenarios
 
+**Web Development Project**
+```bash
+mkcd my-website \
+  --profile nodejs \
+  --git \
+  --git-remote https://github.com/user/my-website.git \
+  --license mit
+```
+
+**Go CLI Tool**
 ```bash
 mkcd my-tool \
   --git \
@@ -239,19 +314,33 @@ mkcd my-tool \
   --editor code
 ```
 
-### Python Data Science Project
-
+**Python Data Science Project**
 ```bash
 mkcd data-analysis \
   --profile python \
-  --touch "notebook.ipynb,data/.gitkeep,src/__init__.py" \
+  --git \
+  --touch "notebook.ipynb,requirements.txt" \
   --git-remote https://github.com/user/data-analysis.git
 ```
 
-### Quick Prototype
-
+**Quick Prototype**
 ```bash
-mkcd prototype --temp --git --readme --open-editor
+mkcd prototype \
+  --git \
+  --readme \
+  --gitignore general \
+  --open-editor
+```
+
+**Enterprise Project Setup**
+```bash
+mkcd enterprise-app \
+  --profile dev \
+  --git \
+  --git-remote https://github.com/company/enterprise-app.git \
+  --license apache-2.0 \
+  --touch "docker-compose.yml,.env.example" \
+  --interactive
 ```
 
 ## 🏗️ Architecture
@@ -368,11 +457,12 @@ We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) f
 
 ## 📚 Documentation
 
-- [Installation Guide](docs/INSTALLATION.md)
-- [Configuration Reference](docs/CONFIGURATION.md)
-- [Template System](docs/TEMPLATES.md)
-- [Shell Integration](docs/SHELL_INTEGRATION.md)
-- [API Documentation](docs/API.md)
+- [Release Guide](docs/RELEASE.md) - How to create releases and distribute packages
+- [Changelog](CHANGELOG.md) - Version history and release notes
+- Configuration Reference (Coming Soon)
+- Template System (Coming Soon)
+- Shell Integration (Coming Soon)
+- API Documentation (Coming Soon)
 
 ## 🔒 Security
 
@@ -391,16 +481,34 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 📊 Project Status
 
+**Current Version**: v1.0.0 🎉
+
 mkcd is actively maintained and under continuous development. We follow semantic versioning and maintain backward compatibility.
 
-### Roadmap
+### ✅ What's Ready (v1.0.0)
 
-- [ ] Template marketplace and sharing
-- [ ] Plugin system for extensibility
-- [ ] Cloud integration for template sync
-- [ ] IDE extensions (VSCode, JetBrains)
-- [ ] Advanced workflow automation
-- [ ] Team collaboration features
+- ✅ **Core mkcd command** with comprehensive options
+- ✅ **Profile management** system with built-in profiles
+- ✅ **Configuration management** with TOML format
+- ✅ **Git integration** with repository initialization and remotes
+- ✅ **Editor integration** with 15+ supported editors
+- ✅ **File generation** (README, .gitignore, LICENSE)
+- ✅ **Safety features** and path validation
+- ✅ **Cross-platform builds** (Linux, macOS, Windows)
+- ✅ **Professional build system** with Makefile
+- ✅ **Automated releases** with GitHub Actions
+
+### 🚀 Roadmap (Future Versions)
+
+- [ ] **Template marketplace** and sharing
+- [ ] **Plugin system** for extensibility
+- [ ] **History and undo** functionality
+- [ ] **Batch operations** with pattern support
+- [ ] **Shell integration** wrapper functions
+- [ ] **Cloud integration** for template sync
+- [ ] **IDE extensions** (VSCode, JetBrains)
+- [ ] **Advanced workflow** automation
+- [ ] **Team collaboration** features
 
 ---
 
